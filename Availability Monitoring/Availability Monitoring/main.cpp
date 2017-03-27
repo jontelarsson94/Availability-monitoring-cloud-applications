@@ -23,6 +23,15 @@ char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
 char URLToTest[] = "http://snowfire.se/";
 
+/*
+ 
+ Returns 0 if website is down
+ Returns 1 if website is up
+ Returns 2 if we have no internet connection
+ 
+ 
+ */
+
 int checkAvailability()
 {
     CURL *curl;
@@ -41,7 +50,6 @@ int checkAvailability()
         
         if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
             //If we can go to google.com we can know that the internet connection is up and running
-            //cout << "Google code 200" << endl;
             
                 
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
@@ -51,19 +59,16 @@ int checkAvailability()
                 
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
                     //This means our url that being tested is working
-                    //cout << "TestUrl code 200" << endl;
-                    /* always cleanup */
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
                     //This means, we have internet but our website is down
-                    //cout << "Should return 0" << endl;
-                    /* always cleanup */
                     curl_easy_cleanup(curl);
                     return 0;
                 }
             
         } else {
+            //This means, google was down or we had no internet connection
             curl_easy_setopt(curl, CURLOPT_URL, controlSiteTwo);
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
@@ -72,45 +77,34 @@ int checkAvailability()
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
             
             if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                //If we can go to basecamp we can know that the internet connection is up and running
-                //This means google was either down or we had no connection
-                //cout << "Google not 200" << endl;
+                //If we couldn't go to google but we can go to basecamp we can know that the internet connection is up and running
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 res = curl_easy_perform (curl);
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
                 
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                    //If our url is up and running, it means that google was down but we have internet connection
-                    //cout << "TestUrl code 200" << endl;
-                    /* always cleanup */
+                    //If our url is up and running, it means that google was down but we have internet connection and our site wasn't down
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
-                    //If we can't reach either google or our own website, we can safely say that our internet connection was down
-                    //cout << "Should return 2" << endl;
-                    /* always cleanup */
+                    //If we couldnt reach google or our website, but we could reach basecamp, we can safely say that our website is down
                     curl_easy_cleanup(curl);
                     return 0;
                 }
             } else {
-                //This means google was either down or we had no connection
-                //cout << "Google not 200" << endl;
+                //This means google was down and basecamp was down. Which is almost impossible, so lets try one more connection
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 res = curl_easy_perform (curl);
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
                 
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                    //If our url is up and running, it means that google was down but we have internet connection
-                    //cout << "TestUrl code 200" << endl;
-                    /* always cleanup */
+                    //If our url is up and running, it means that both google and basecamp was down, but our website was up.
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
-                    //If we can't reach either google or our own website, we can safely say that our internet connection was down
-                    //cout << "Should return 2" << endl;
-                    /* always cleanup */
+                    //If we can't reach google, basecamp or our own website, we can safely say that our internet connection is lost. If we are wrong, we have at least proven that absolutely anything is possible.
                     curl_easy_cleanup(curl);
                     return 2;
                 }
