@@ -43,15 +43,6 @@ int checkAvailability()
             //If we can go to google.com we can know that the internet connection is up and running
             //cout << "Google code 200" << endl;
             
-            curl_easy_setopt(curl, CURLOPT_URL, controlSiteTwo);
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-            res = curl_easy_perform (curl);
-            int http_code = 0;
-            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-            
-            if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                //If we can go to basecamp we can know that the internet connection is up and running
                 
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -67,6 +58,37 @@ int checkAvailability()
                 } else {
                     //This means, we have internet but our website is down
                     //cout << "Should return 0" << endl;
+                    /* always cleanup */
+                    curl_easy_cleanup(curl);
+                    return 0;
+                }
+            
+        } else {
+            curl_easy_setopt(curl, CURLOPT_URL, controlSiteTwo);
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+            res = curl_easy_perform (curl);
+            int http_code = 0;
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+            
+            if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
+                //If we can go to basecamp we can know that the internet connection is up and running
+                //This means google was either down or we had no connection
+                //cout << "Google not 200" << endl;
+                curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
+                curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+                res = curl_easy_perform (curl);
+                curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+                
+                if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
+                    //If our url is up and running, it means that google was down but we have internet connection
+                    //cout << "TestUrl code 200" << endl;
+                    /* always cleanup */
+                    curl_easy_cleanup(curl);
+                    return 1;
+                } else {
+                    //If we can't reach either google or our own website, we can safely say that our internet connection was down
+                    //cout << "Should return 2" << endl;
                     /* always cleanup */
                     curl_easy_cleanup(curl);
                     return 0;
@@ -92,28 +114,6 @@ int checkAvailability()
                     curl_easy_cleanup(curl);
                     return 2;
                 }
-            }
-            
-        } else {
-            //This means google was either down or we had no connection
-            //cout << "Google not 200" << endl;
-            curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            res = curl_easy_perform (curl);
-            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-            
-            if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                //If our url is up and running, it means that google was down but we have internet connection
-                //cout << "TestUrl code 200" << endl;
-                /* always cleanup */
-                curl_easy_cleanup(curl);
-                return 1;
-            } else {
-                //If we can't reach either google or our own website, we can safely say that our internet connection was down
-                //cout << "Should return 2" << endl;
-                /* always cleanup */
-                curl_easy_cleanup(curl);
-                return 2;
             }
         }
     }
