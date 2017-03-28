@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <limits>
 #include <fstream>
+#include <locale>
 using namespace std;
 
 size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
@@ -25,6 +26,7 @@ float numberOfSecs = 0.0;
 float intervalSecs = 43200.0;
 char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
+double slowestResponseTime = 0.0;
 
 
 /*
@@ -59,8 +61,14 @@ int checkAvailability(char *URLToTest)
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 res = curl_easy_perform (curl);
+                double response_time;
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-                
+                curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &response_time);
+                if(response_time > slowestResponseTime) {
+                    slowestResponseTime = response_time;
+                }
+                cout << "Current slowest response time: " << slowestResponseTime << endl;
+                //Trying the response time
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
                     //This means our url that being tested is working
                     curl_easy_cleanup(curl);
@@ -121,6 +129,7 @@ int checkAvailability(char *URLToTest)
 
 int main( int argc, char *argv[] )
 {
+    cout.imbue(std::locale(""));
     std::ofstream outfile;
     struct timeval  tv1, tv2;
     struct timeval  td1, td2;
