@@ -21,6 +21,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
+		46353A281E8A614E00FF784F /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +93,8 @@
 				46353A161E8941B400FF784F /* Sources */,
 				46353A171E8941B400FF784F /* Frameworks */,
 				46353A181E8941B400FF784F /* CopyFiles */,
+				46353A271E8A613B00FF784F /* Resources */,
+				46353A281E8A614E00FF784F /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -125,6 +136,16 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		46353A271E8A613B00FF784F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		46353A161E8941B400FF784F /* Sources */ = {
@@ -258,6 +279,7 @@
 				46353A231E8941B500FF784F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -8,6 +8,8 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+#include <limits>
+#include <fstream>
 using namespace std;
 
 size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
@@ -16,12 +18,14 @@ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 
-int checkSeconds = 60;
+int checkSeconds = 5;
 float unAvailabilityTime = 0.0;
 float timeNoConnection = 0.0;
+float numberOfSecs = 0.0;
+float intervalSecs = 43200.0;
 char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
-char URLToTest[] = "http://snowfire.se/";
+
 
 /*
  
@@ -32,7 +36,7 @@ char URLToTest[] = "http://snowfire.se/";
  
  */
 
-int checkAvailability()
+int checkAvailability(char *URLToTest)
 {
     CURL *curl;
     CURLcode res;
@@ -115,20 +119,25 @@ int checkAvailability()
     return 2;
 }
 
-int main(void)
+int main( int argc, char *argv[] )
 {
+    std::ofstream outfile;
     struct timeval  tv1, tv2;
+    struct timeval  td1, td2;
+    cout << "arg: " << argv[1] << endl;
+    char *URLToTest = argv[1];
     
     while (true) {
+        gettimeofday(&td1, NULL);
         gettimeofday(&tv1, NULL);
-        int success = checkAvailability();
+        int success = checkAvailability(URLToTest);
         if(success == 0) {
             //If success = 0, it means that our website was down and taking times on how long it is down
             gettimeofday(&tv2, NULL);
             unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
             //cout << "Current time: " << unAvailabilityTime << endl;
-            while (checkAvailability() == 0) {
+            while (checkAvailability(URLToTest) == 0) {
                 gettimeofday(&tv2, NULL);
                 unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
@@ -142,7 +151,7 @@ int main(void)
             timeNoConnection += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
             //cout << "Current time: " << unAvailabilityTime << endl;
-            while (checkAvailability() == 2) {
+            while (checkAvailability(URLToTest) == 2) {
                 gettimeofday(&tv2, NULL);
                 timeNoConnection += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
@@ -152,6 +161,21 @@ int main(void)
         cout << "Time unavailable: " << unAvailabilityTime << endl;
         cout << "Time no connection: " << timeNoConnection << endl;
         std::this_thread::sleep_for(std::chrono::seconds(checkSeconds));
+        gettimeofday(&td2, NULL);
+        numberOfSecs += (double) (td2.tv_usec - td1.tv_usec) / 1000000 + (double) (td2.tv_sec - td1.tv_sec);
+        if(numberOfSecs > intervalSecs) {
+            // current date/time based on current system
+            time_t now = time(0);
+            
+            // convert now to string form
+            char* dt = ctime(&now);
+            outfile.open("test.txt", std::ios_base::app);
+            outfile << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
+            outfile.close();
+            unAvailabilityTime = 0.0;
+            timeNoConnection = 0.0;
+            numberOfSecs = 0.0;
+        }
     }
     
     return 0;
