@@ -19,11 +19,10 @@ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 
-int checkSeconds = 5;
 float unAvailabilityTime = 0.0;
 float timeNoConnection = 0.0;
 float numberOfSecs = 0.0;
-float intervalSecs = 43200.0;
+float intervalSecs = 10.0;
 char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
 double slowestResponseTime = 0.0;
@@ -38,7 +37,7 @@ double slowestResponseTime = 0.0;
  
  */
 
-int checkAvailability(char *URLToTest)
+int checkAvailability(char *URLToTest, double *resp_time)
 {
     CURL *curl;
     CURLcode res;
@@ -64,6 +63,7 @@ int checkAvailability(char *URLToTest)
                 double response_time;
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
                 curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &response_time);
+                *resp_time = response_time;
                 if(response_time > slowestResponseTime) {
                     slowestResponseTime = response_time;
                 }
@@ -135,18 +135,22 @@ int main( int argc, char *argv[] )
     struct timeval  td1, td2;
     cout << "arg: " << argv[1] << endl;
     char *URLToTest = argv[1];
+    char *fileName = argv[2];
+    double response_time;
+    long checkSeconds = strtol(argv[3], NULL, 10);
+    
     
     while (true) {
         gettimeofday(&td1, NULL);
         gettimeofday(&tv1, NULL);
-        int success = checkAvailability(URLToTest);
+        int success = checkAvailability(URLToTest, &response_time);
         if(success == 0) {
             //If success = 0, it means that our website was down and taking times on how long it is down
             gettimeofday(&tv2, NULL);
             unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
             //cout << "Current time: " << unAvailabilityTime << endl;
-            while (checkAvailability(URLToTest) == 0) {
+            while (checkAvailability(URLToTest, &response_time) == 0) {
                 gettimeofday(&tv2, NULL);
                 unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
@@ -160,7 +164,7 @@ int main( int argc, char *argv[] )
             timeNoConnection += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
             //cout << "Current time: " << unAvailabilityTime << endl;
-            while (checkAvailability(URLToTest) == 2) {
+            while (checkAvailability(URLToTest, &response_time) == 2) {
                 gettimeofday(&tv2, NULL);
                 timeNoConnection += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
@@ -169,22 +173,21 @@ int main( int argc, char *argv[] )
         }
         cout << "Time unavailable: " << unAvailabilityTime << endl;
         cout << "Time no connection: " << timeNoConnection << endl;
+        cout << "Response time" << response_time << endl;
         std::this_thread::sleep_for(std::chrono::seconds(checkSeconds));
         gettimeofday(&td2, NULL);
         numberOfSecs += (double) (td2.tv_usec - td1.tv_usec) / 1000000 + (double) (td2.tv_sec - td1.tv_sec);
-        if(numberOfSecs > intervalSecs) {
-            // current date/time based on current system
-            time_t now = time(0);
-            
-            // convert now to string form
-            char* dt = ctime(&now);
-            outfile.open("test.txt", std::ios_base::app);
-            outfile << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
-            outfile.close();
-            unAvailabilityTime = 0.0;
-            timeNoConnection = 0.0;
-            numberOfSecs = 0.0;
-        }
+        // current date/time based on current system
+        time_t now = time(0);
+    
+        // convert now to string form
+        char* dt = ctime(&now);
+        outfile.open(fileName, std::ios_base::app);
+        outfile << response_time << "\t" << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
+        outfile.close();
+        unAvailabilityTime = 0.0;
+        timeNoConnection = 0.0;
+        numberOfSecs = 0.0;
     }
     
     return 0;
