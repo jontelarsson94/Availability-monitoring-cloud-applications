@@ -37,6 +37,16 @@ double slowestResponseTime = 0.0;
  
  */
 
+/*
+ 
+ Args to send from terminal is:
+ argv[1] = The url to send requests to
+ argv[2] = The filename to save the response times to
+ argv[3] = The filename to save the availability to
+ argv[4] = How many seconds to wait between each request
+ 
+ */
+
 int checkAvailability(char *URLToTest, double *resp_time)
 {
     CURL *curl;
@@ -49,8 +59,10 @@ int checkAvailability(char *URLToTest, double *resp_time)
         curl_easy_setopt(curl, CURLOPT_URL, controlSiteOne);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
         res = curl_easy_perform (curl);
         int http_code = 0;
+        double response_time;
         curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
         
         if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
@@ -59,18 +71,18 @@ int checkAvailability(char *URLToTest, double *resp_time)
                 
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
                 res = curl_easy_perform (curl);
-                double response_time;
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
                 curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &response_time);
-                *resp_time = response_time;
-                if(response_time > slowestResponseTime) {
-                    slowestResponseTime = response_time;
-                }
-                cout << "Current slowest response time: " << slowestResponseTime << endl;
                 //Trying the response time
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
                     //This means our url that being tested is working
+                    *resp_time = response_time;
+                    if(response_time > slowestResponseTime) {
+                        slowestResponseTime = response_time;
+                    }
+                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
@@ -84,6 +96,7 @@ int checkAvailability(char *URLToTest, double *resp_time)
             curl_easy_setopt(curl, CURLOPT_URL, controlSiteTwo);
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
             res = curl_easy_perform (curl);
             int http_code = 0;
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
@@ -92,11 +105,18 @@ int checkAvailability(char *URLToTest, double *resp_time)
                 //If we couldn't go to google but we can go to basecamp we can know that the internet connection is up and running
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
                 res = curl_easy_perform (curl);
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+                curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &response_time);
                 
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
                     //If our url is up and running, it means that google was down but we have internet connection and our site wasn't down
+                    *resp_time = response_time;
+                    if(response_time > slowestResponseTime) {
+                        slowestResponseTime = response_time;
+                    }
+                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
@@ -108,11 +128,18 @@ int checkAvailability(char *URLToTest, double *resp_time)
                 //This means google was down and basecamp was down. Which is almost impossible, so lets try one more connection
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
                 res = curl_easy_perform (curl);
                 curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+                curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &response_time);
                 
                 if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
                     //If our url is up and running, it means that both google and basecamp was down, but our website was up.
+                    *resp_time = response_time;
+                    if(response_time > slowestResponseTime) {
+                        slowestResponseTime = response_time;
+                    }
+                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
@@ -131,13 +158,17 @@ int main( int argc, char *argv[] )
 {
     cout.imbue(std::locale(""));
     std::ofstream outfile;
+    //Uncomment if we want commas instead of dots
+    //outfile.imbue(std::locale(""));
     struct timeval  tv1, tv2;
     struct timeval  td1, td2;
     cout << "arg: " << argv[1] << endl;
     char *URLToTest = argv[1];
-    char *fileName = argv[2];
+    //char newURL[] = "snowfire.se";
+    char *fileNameResponse = argv[2];
+    char *fileNameAvailability = argv[3];
     double response_time;
-    long checkSeconds = strtol(argv[3], NULL, 10);
+    long checkSeconds = strtol(argv[4], NULL, 10);
     
     
     while (true) {
@@ -146,15 +177,24 @@ int main( int argc, char *argv[] )
         int success = checkAvailability(URLToTest, &response_time);
         if(success == 0) {
             //If success = 0, it means that our website was down and taking times on how long it is down
+            int i = 0;
+            double timeNotConnected = 0.0;
             gettimeofday(&tv2, NULL);
-            unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
+            timeNotConnected += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
+            i++;
+            cout << i << endl;
             //cout << "Current time: " << unAvailabilityTime << endl;
             while (checkAvailability(URLToTest, &response_time) == 0) {
+                cout << i << endl;
                 gettimeofday(&tv2, NULL);
-                unAvailabilityTime += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
+                timeNotConnected += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
+                i++;
                 //cout << "Current downtime: " << unAvailabilityTime << endl;
+                if (i >= 2) {
+                    unAvailabilityTime += timeNotConnected;
+                }
             }
             
             //cout << "Time unavailable: " << unAvailabilityTime << endl;
@@ -168,6 +208,7 @@ int main( int argc, char *argv[] )
                 gettimeofday(&tv2, NULL);
                 timeNoConnection += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
+                
                 //cout << "Current downtime: " << unAvailabilityTime << endl;
             }
         }
@@ -182,8 +223,19 @@ int main( int argc, char *argv[] )
     
         // convert now to string form
         char* dt = ctime(&now);
-        outfile.open(fileName, std::ios_base::app);
-        outfile << response_time << "\t" << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
+        outfile.open(fileNameResponse, std::ios_base::app);
+        if(success == 1) {
+            outfile << response_time << ", ";
+        }
+        
+        outfile.close();
+        
+        outfile.open(fileNameAvailability, std::ios_base::app);
+        
+        
+        outfile << "\t" << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
+        
+        
         outfile.close();
         unAvailabilityTime = 0.0;
         timeNoConnection = 0.0;
