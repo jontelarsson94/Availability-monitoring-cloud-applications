@@ -26,6 +26,7 @@ float intervalSecs = 10.0;
 char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
 double slowestResponseTime = 0.0;
+int counter = 0;
 
 
 /*
@@ -212,6 +213,7 @@ int main( int argc, char *argv[] )
                 //cout << "Current downtime: " << unAvailabilityTime << endl;
             }
         }
+        counter++;
         cout << "Time unavailable: " << unAvailabilityTime << endl;
         cout << "Time no connection: " << timeNoConnection << endl;
         cout << "Response time" << response_time << endl;
@@ -224,8 +226,13 @@ int main( int argc, char *argv[] )
         // convert now to string form
         char* dt = ctime(&now);
         outfile.open(fileNameResponse, std::ios_base::app);
+        
         if(success == 1) {
             outfile << response_time << ", ";
+        }
+        
+        if(counter % 86400/checkSeconds == 0) {
+            outfile << "\n\n\n\n";
         }
         
         outfile.close();
