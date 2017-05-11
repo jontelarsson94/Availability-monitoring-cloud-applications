@@ -27,6 +27,7 @@ char controlSiteOne[] = "https://www.google.se";
 char controlSiteTwo[] = "https://basecamp.com/";
 double slowestResponseTime = 0.0;
 int counter = 0;
+int day = 1;
 
 
 /*
@@ -231,22 +232,26 @@ int main( int argc, char *argv[] )
             outfile << response_time << ", ";
         }
         
-        if(counter % 86400/checkSeconds == 0) {
-            outfile << "\n\n\n\n";
+        if(counter % (86400/checkSeconds) == 0) {
+            day++;
+            outfile << "\n\n\n\nNew day!!! It is day: " << day << "\n\n\n" << endl;
         }
         
         outfile.close();
         
         outfile.open(fileNameAvailability, std::ios_base::app);
         
-        
-        outfile << "\t" << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
+        if(counter % (86400/checkSeconds) == 0) {
+            outfile << "\n\n\n\nNew day!!! It is day: " << day << "\n\n\n" << endl;
+        }
+        outfile << "\t" << response_time << "\t" << unAvailabilityTime << "\t" << timeNoConnection << "\t" << dt << "\n";
         
         
         outfile.close();
         unAvailabilityTime = 0.0;
         timeNoConnection = 0.0;
         numberOfSecs = 0.0;
+        response_time = 0.0;
     }
     
     return 0;
