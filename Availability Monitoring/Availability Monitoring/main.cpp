@@ -24,7 +24,7 @@ float timeNoConnection = 0.0;
 float numberOfSecs = 0.0;
 float intervalSecs = 10.0;
 char controlSiteOne[] = "https://www.google.se";
-char controlSiteTwo[] = "https://basecamp.com/";
+char controlSiteTwo[] = "https://se.yahoo.com/";
 double slowestResponseTime = 0.0;
 int counter = 0;
 int day = 1;
@@ -84,7 +84,6 @@ int checkAvailability(char *URLToTest, double *resp_time)
                     if(response_time > slowestResponseTime) {
                         slowestResponseTime = response_time;
                     }
-                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
@@ -104,7 +103,7 @@ int checkAvailability(char *URLToTest, double *resp_time)
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
             
             if (http_code == 200 && res != CURLE_ABORTED_BY_CALLBACK){
-                //If we couldn't go to google but we can go to basecamp we can know that the internet connection is up and running
+                //If we couldn't go to google but we can go to yahoo we can know that the internet connection is up and running
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
@@ -118,16 +117,15 @@ int checkAvailability(char *URLToTest, double *resp_time)
                     if(response_time > slowestResponseTime) {
                         slowestResponseTime = response_time;
                     }
-                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
-                    //If we couldnt reach google or our website, but we could reach basecamp, we can safely say that our website is down
+                    //If we couldnt reach google or our website, but we could reach yahoo, we can safely say that our website is down
                     curl_easy_cleanup(curl);
                     return 0;
                 }
             } else {
-                //This means google was down and basecamp was down. Which is almost impossible, so lets try one more connection
+                //This means google was down and yahoo was down. Which is almost impossible, so lets try one more connection
                 curl_easy_setopt(curl, CURLOPT_URL, URLToTest);
                 curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15);
@@ -141,11 +139,10 @@ int checkAvailability(char *URLToTest, double *resp_time)
                     if(response_time > slowestResponseTime) {
                         slowestResponseTime = response_time;
                     }
-                    cout << "Current slowest response time: " << slowestResponseTime << endl;
                     curl_easy_cleanup(curl);
                     return 1;
                 } else {
-                    //If we can't reach google, basecamp or our own website, we can safely say that our internet connection is lost. If we are wrong, we have at least proven that absolutely anything is possible.
+                    //If we can't reach google, yahoo or our own website, we can safely say that our internet connection is lost. If we are wrong, we have at least proven that absolutely anything is possible.
                     curl_easy_cleanup(curl);
                     return 2;
                 }
@@ -184,19 +181,14 @@ int main( int argc, char *argv[] )
             gettimeofday(&tv2, NULL);
             timeNotConnected += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
             gettimeofday(&tv1, NULL);
-            i++;
-            cout << i << endl;
-            //cout << "Current time: " << unAvailabilityTime << endl;
+            
+            //While our tool has no connection, we accumulate the time it is unconnected
             while (checkAvailability(URLToTest, &response_time) == 0) {
                 cout << i << endl;
                 gettimeofday(&tv2, NULL);
                 timeNotConnected += (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
                 gettimeofday(&tv1, NULL);
-                i++;
-                //cout << "Current downtime: " << unAvailabilityTime << endl;
-                if (i >= 2) {
-                    unAvailabilityTime += timeNotConnected;
-                }
+                unAvailabilityTime += timeNotConnected;
             }
             
             //cout << "Time unavailable: " << unAvailabilityTime << endl;
